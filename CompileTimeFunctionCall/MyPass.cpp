@@ -8,19 +8,17 @@
 #include <map>
 
 using namespace llvm;
-using FunctionCalls = std::map<const Function*, size_t>;
+using FunctionCalls = std::map<const Function *, size_t>;
 
 // A LLVM Pass to analyse the function calls
 class CompileTimeFunctionCallCounter : public AnalysisInfoMixin<CompileTimeFunctionCallCounter>
 {
 public:
-
     using Result = FunctionCalls;
 
-    Result run(Module& module, ModuleAnalysisManager&);
+    Result run(Module &module, ModuleAnalysisManager &);
 
 private:
-
     friend struct AnalysisInfoMixin<CompileTimeFunctionCallCounter>;
 
     // A special key to identify a particular analysis pass type
@@ -31,23 +29,22 @@ private:
 class CompileTimeFunctionCallPrinter : public PassInfoMixin<CompileTimeFunctionCallPrinter>
 {
 public:
-
-    PreservedAnalyses run(Module& module, ModuleAnalysisManager& analysisManager);
+    PreservedAnalyses run(Module &module, ModuleAnalysisManager &analysisManager);
 };
 
 AnalysisKey CompileTimeFunctionCallCounter::Key;
 
-CompileTimeFunctionCallCounter::Result CompileTimeFunctionCallCounter::run(Module& module, ModuleAnalysisManager&)
+CompileTimeFunctionCallCounter::Result CompileTimeFunctionCallCounter::run(Module &module, ModuleAnalysisManager &)
 {
     Result functionCalls;
 
-    for (const Function& function : module)
+    for (const Function &function : module)
     {
-        for (const BasicBlock& basicBlock : function)
+        for (const BasicBlock &basicBlock : function)
         {
-            for (const Instruction& instruction : basicBlock)
+            for (const Instruction &instruction : basicBlock)
             {
-                const CallBase* functionCallInstruction = dyn_cast<CallBase>(&instruction);
+                const CallBase *functionCallInstruction = dyn_cast<CallBase>(&instruction);
                 if (nullptr == functionCallInstruction)
                 {
                     // Ignore instructions that are not function calls
@@ -55,7 +52,7 @@ CompileTimeFunctionCallCounter::Result CompileTimeFunctionCallCounter::run(Modul
                 }
 
                 // We can get the called function if this is a direct function call
-                const Function* calledFunction = functionCallInstruction->getCalledFunction();
+                const Function *calledFunction = functionCallInstruction->getCalledFunction();
                 if (nullptr == calledFunction)
                 {
                     continue;
@@ -75,10 +72,10 @@ CompileTimeFunctionCallCounter::Result CompileTimeFunctionCallCounter::run(Modul
     return functionCalls;
 }
 
-PreservedAnalyses CompileTimeFunctionCallPrinter::run(Module& module, ModuleAnalysisManager& analysisManager)
+PreservedAnalyses CompileTimeFunctionCallPrinter::run(Module &module, ModuleAnalysisManager &analysisManager)
 {
     auto functionCalls = analysisManager.getResult<CompileTimeFunctionCallCounter>(module);
-    for (auto& functionCall : functionCalls)
+    for (auto &functionCall : functionCalls)
     {
         std::cout << "Function: " << functionCall.first->getName().str() << ", "
                   << "called " << functionCall.second << " times" << std::endl;
@@ -92,10 +89,12 @@ PreservedAnalyses CompileTimeFunctionCallPrinter::run(Module& module, ModuleAnal
 extern "C" LLVM_ATTRIBUTE_WEAK ::PassPluginLibraryInfo llvmGetPassPluginInfo()
 {
     return {
-        LLVM_PLUGIN_API_VERSION, "CompileTimeFunctionCallPrinter", LLVM_VERSION_STRING, [](PassBuilder& passBuilder) {
+        LLVM_PLUGIN_API_VERSION, "CompileTimeFunctionCallPrinter", LLVM_VERSION_STRING, [](PassBuilder &passBuilder)
+        {
             // 1. Registration for "opt -passes="compile-time-function-call-counter""
             passBuilder.registerPipelineParsingCallback(
-                [&](StringRef name, ModulePassManager& passManager, ArrayRef<PassBuilder::PipelineElement>) {
+                [&](StringRef name, ModulePassManager &passManager, ArrayRef<PassBuilder::PipelineElement>)
+                {
                     if (name == "compile-time-function-call-counter")
                     {
                         passManager.addPass(CompileTimeFunctionCallPrinter());
@@ -106,10 +105,8 @@ extern "C" LLVM_ATTRIBUTE_WEAK ::PassPluginLibraryInfo llvmGetPassPluginInfo()
                 });
 
             // 2. Registration for "analysisManager.getResult<CompileTimeFunctionCallCounter>(module)"
-            passBuilder.registerAnalysisRegistrationCallback([](ModuleAnalysisManager& analysisManager) {
-                analysisManager.registerPass([&]() {
-                    return CompileTimeFunctionCallCounter();
-                });
-            });
+            passBuilder.registerAnalysisRegistrationCallback([](ModuleAnalysisManager &analysisManager)
+                                                             { analysisManager.registerPass([&]()
+                                                                                            { return CompileTimeFunctionCallCounter(); }); });
         }};
 }

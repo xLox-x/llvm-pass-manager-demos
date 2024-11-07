@@ -1,11 +1,13 @@
 #!/usr/bin/bash
 
 rm -rf build
+rm -rf tmp
+mkdit tmp
 
 cmake -B build
 cmake --build build
 
-clang -S -emit-llvm tmp/foo.c -o tmp/foo.ll
+clang -S -emit-llvm foo.c -o tmp/foo.ll
 
 opt -load-pass-plugin=build/libmypass.so -passes="runtime-function-call-counter" tmp/foo.ll -o tmp/foo_mypass.bin
 
