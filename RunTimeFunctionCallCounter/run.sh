@@ -2,7 +2,7 @@
 
 rm -rf build
 rm -rf tmp
-mkdit tmp
+mkdir tmp
 
 cmake -B build
 cmake --build build
