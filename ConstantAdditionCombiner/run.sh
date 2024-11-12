@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 rm -rf build
-mr -rf tmp
+rm -rf tmp
 mkdir tmp
 
 cmake -B build
